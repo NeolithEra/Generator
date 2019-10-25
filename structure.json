@@ -1,0 +1,83 @@
+{
+  "models": [
+    {
+      "name": "MyModal",
+      "table": "my_modals",
+      "fields": [
+        {
+          "name": "uuid",
+          "type": "uuid",
+          "nullable": false,
+          "default": null,
+          "index": true
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "nullable": false,
+          "default": "what is this"
+        }
+      ],
+      "schemas": {
+        "get": ["name"],
+        "create": ["name"],
+        "update": [
+          {
+            "field": "name",
+            "required": true
+          }
+        ],
+        "db": ["uuid", "name"]
+      },
+      "crud": {
+        "get": {},
+        "create": {},
+        "update": ["name"],
+        "delete": {}
+      }
+    },
+    {
+      "name": "Users",
+      "table": "users",
+      "fields": [
+        {
+          "name": "uuid",
+          "type": "uuid",
+          "nullable": false,
+          "default": null,
+          "index": true
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "nullable": false,
+          "default": "what is this"
+        },
+        {
+          "name": "name",
+          "type": "str",
+          "nullable": false,
+          "length": 50,
+          "default": "what is this"
+        }
+      ],
+      "schemas": {
+        "get": ["name"],
+        "create": ["name"],
+        "update": [
+          {
+            "field": "name",
+            "required": true
+          }
+        ],
+        "db": ["uuid", "name"]
+      },
+      "crud": {
+        "get": {},
+        "create": {},
+        "update": ["name"],
+        "delete": {}
+      }
+    }
+  ]
+}
