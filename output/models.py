@@ -12,6 +12,9 @@ class MyModal(State.mysql.Base):
     Represents a MyModal
     """
     __tablename__ = "my_modals"
+    uuid = Column(String(64),primary_key=True,index=True,unique=False,nullable=False,default="None",)
+    name = Column(String(32),unique=False,nullable=False,default="default name",)
+    description = Column(Text,unique=False,nullable=False,default="what is this",)
 
 
 class Users(State.mysql.Base):

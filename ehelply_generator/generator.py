@@ -37,6 +37,7 @@ from ehelply_bootstrapper.utils.state import State
         self.crud_content: str = self.crud_base
 
     def generate_models(self) -> None:
+
         for model in self.estructure['models']:
             self.model_content += """
 
@@ -46,50 +47,65 @@ class {name}(State.mysql.Base):
     \"\"\"
     __tablename__ = \"{table}\"\n""".format(name=model['name'], table=model['table'])
 
-        for field in model['fields']:
-            """
-            name
-            type.
-            index
-            nullable
-            default
-            unique
-            """
+            for field in model['fields']:
+                """
+                name
+                type.
+                index
+                nullable
+                default
+                unique
+                """
 
-            name: str = field['name']
-            type: str = field['type'] + ","
+                name: str = field['name']
+                type: str = field['type'] + ","
 
-            if field['index']:
-                index: str = "primary_key=True,index=True,"
-            else:
-                index: str = ""
+                if field['index']:
+                    index: str = "primary_key=True,index=True,"
+                else:
+                    index: str = ""
 
-            if field['nullable']:
-                nullable: str = "nullable=True,"
-            else:
-                nullable: str = "nullable=False,"
+                if field['nullable']:
+                    nullable: str = "nullable=True,"
+                else:
+                    nullable: str = "nullable=False,"
 
-            if field['unique']:
-                unique: str = "unique=True,"
-            else:
-                unique: str = "unique=False,"
+                if field['unique']:
+                    unique: str = "unique=True,"
+                else:
+                    unique: str = "unique=False,"
 
-            if 'default' in field:
-                default: str = "default=\"" + field['default'] + "\","
-            else:
-                default: str = ""
+                if 'default' in field:
+                    default: str = "default=\"" + field['default'] + "\","
+                else:
+                    default: str = ""
 
-            self.model_content += """    {name} = Column({type}{index}{unique}{nullable}{default})\n""".format(
-                name=name,
-                type=type,
-                index=index,
-                unique=unique,
-                nullable=nullable,
-                default=default)
+                self.model_content += """    {name} = Column({type}{index}{unique}{nullable}{default})\n""".format(
+                    name=name,
+                    type=type,
+                    index=index,
+                    unique=unique,
+                    nullable=nullable,
+                    default=default)
 
         self.model_content += "\n# END OF GENERATED CODE\n"
 
     def generate_schemas(self) -> None:
+        for model in self.estructure['schemas']:
+            for method in ["get", "create", "update", "db"]:
+                self.schema_content += """
+
+class {name}{method}(BaseModel):
+    \"\"\"
+    Used for {method}
+    \"\"\"\n""".format(name=model['name'], method=method.capitalize())
+                for field in model[method]:
+                    default:str = ""
+                    if not field['required']:
+                        default = " = None"
+                    self.schema_content += """    {name}: {type}{default}\n""".format(name=field['name'], type=field['type'], default=default)
+
+
         self.schema_content += "\n# END OF GENERATED CODE\n"
 
     def generate_crud(self) -> None:
@@ -104,6 +120,9 @@ class {name}(State.mysql.Base):
         }
 
         for model in self.structure['models']:
+            """
+            Generic information per model
+            """
             name: str = model['name']
             table: str = model['table']
             fields: list = model['fields']
@@ -114,12 +133,19 @@ class {name}(State.mysql.Base):
             }
             schema_schema: dict = {
                 "name": name,
-                "fields": [],
+                "get": [],
+                "create": [],
+                "update": [],
+                "db": [],
             }
             crud_schema: dict = {
                 "name": name,
                 "fields": [],
             }
+
+            """
+            MODEL FIELD INFORMATION SETUP
+            """
             for field in fields:
                 """
                 Types:
@@ -138,19 +164,26 @@ class {name}(State.mysql.Base):
                 crud_field: dict = {}
 
                 model_field['name'] = field['name']
+                schema_field['name'] = field['name']
 
+                """
+                TYPE INFORMATION CHECKS BELOW
+                """
                 if field['type'] == 'uuid':
                     model_field['type'] = "String(64)"
+                    schema_field['type'] = "str"
 
                 elif field['type'] == 'dict':
                     model_field['type'] = "JSON"
                     model_field['nullable'] = True
                     model_field['default'] = "{}"
+                    schema_field['type'] = "dict"
 
                 elif field['type'] == 'list':
                     model_field['type'] = "JSON"
                     model_field['nullable'] = True
                     model_field['default'] = "[]"
+                    schema_field['type'] = "list"
 
                 elif field['type'] == 'str':
                     length = "128"
@@ -159,6 +192,7 @@ class {name}(State.mysql.Base):
                     model_field['type'] = "String({length})".format(length=length)
                     model_field['nullable'] = True
                     model_field['default'] = "{}"
+                    schema_field['type'] = "str"
 
                 elif field['type'] == 'id':
                     length = "64"
@@ -167,22 +201,28 @@ class {name}(State.mysql.Base):
                     model_field['type'] = "String({length})".format(length=length)
                     model_field['nullable'] = True
                     model_field['default'] = "{}"
+                    schema_field['type'] = "str"
 
                 elif field['type'] == 'text':
                     model_field['type'] = "Text"
                     model_field['nullable'] = True
+                    schema_field['type'] = "str"
 
                 elif field['type'] == 'int':
                     model_field['type'] = "Integer"
                     model_field['nullable'] = True
+                    schema_field['type'] = "int"
 
                 elif field['type'] == 'bool':
                     model_field['type'] = "Boolean"
                     model_field['default'] = "False"
+                    schema_field['type'] = "bool"
 
                 elif field['type'] == 'date':
                     model_field['type'] = "DateTime"
                     model_field['nullable'] = True
+                    schema_field['type'] = "str"
+
                 else:
                     print("Field has no valid type")
                     continue
@@ -207,8 +247,70 @@ class {name}(State.mysql.Base):
                 else:
                     model_field['unique'] = False
 
+                """
+                FORMING SCHEMA FIELDS
+                """
+                for entry in model['schemas']['get']:
+                    if type(entry) == str and entry == schema_field['name']:
+                        schema_schema['get'].append({
+                            'required': True,
+                            'name': schema_field['name'],
+                            'type': schema_field['type']
+                        })
+                    elif type(entry) == dict and entry['field'] == schema_field['name']:
+                        schema_schema['get'].append({
+                            'required': entry['required'],
+                            'name': schema_field['name'],
+                            'type': schema_field['type']
+                        })
+
+                for entry in model['schemas']['create']:
+                    if type(entry) == str and entry == schema_field['name']:
+                        schema_schema['create'].append({
+                            'required': True,
+                            'name': schema_field['name'],
+                            'type': schema_field['type']
+                        })
+                    elif type(entry) == dict and entry['field'] == schema_field['name']:
+                        schema_schema['create'].append({
+                            'required': entry['required'],
+                            'name': schema_field['name'],
+                            'type': schema_field['type']
+                        })
+
+                for entry in model['schemas']['update']:
+                    if type(entry) == str and entry == schema_field['name']:
+                        schema_schema['update'].append({
+                            'required': True,
+                            'name': schema_field['name'],
+                            'type': schema_field['type']
+                        })
+                    elif type(entry) == dict and entry['field'] == schema_field['name']:
+                        schema_schema['update'].append({
+                            'required': entry['required'],
+                            'name': schema_field['name'],
+                            'type': schema_field['type']
+                        })
+
+                for entry in model['schemas']['db']:
+                    if type(entry) == str and entry == schema_field['name']:
+                        schema_schema['db'].append({
+                            'required': True,
+                            'name': schema_field['name'],
+                            'type': schema_field['type']
+                        })
+                    elif type(entry) == dict and entry['field'] == schema_field['name']:
+                        schema_schema['db'].append({
+                            'required': entry['required'],
+                            'name': schema_field['name'],
+                            'type': schema_field['type']
+                        })
+
+                """
+                FORMING CRUD FIELDS
+                """
+
                 model_schema['fields'].append(model_field)
-                schema_schema['fields'].append(schema_field)
                 crud_schema['fields'].append(crud_field)
 
             self.estructure['models'].append(model_schema)
@@ -216,8 +318,11 @@ class {name}(State.mysql.Base):
             self.estructure['cruds'].append(crud_schema)
 
     def run(self) -> None:
-        print(self.structure)
+        print("Input structure")
+        print(json.dumps(self.structure, indent=2))
         self.expand_structure()
+        print("\n\n\n\n\nExpanded structure")
+        print(json.dumps(self.estructure, indent=2))
 
         self.generate_models()
         self.generate_schemas()

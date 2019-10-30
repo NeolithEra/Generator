@@ -12,6 +12,13 @@
           "index": true
         },
         {
+          "name": "name",
+          "type": "str",
+          "nullable": false,
+          "default": "default name",
+          "length": 32
+        },
+        {
           "name": "description",
           "type": "text",
           "nullable": false,
@@ -67,7 +74,7 @@
         "update": [
           {
             "field": "name",
-            "required": true
+            "required": false
           }
         ],
         "db": ["uuid", "name"]
