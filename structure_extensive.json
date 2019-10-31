@@ -77,6 +77,12 @@
           "description",
           "summary"
         ]
+      },
+      "crud": {
+        "get": {},
+        "create": {},
+        "update": {},
+        "delete": {}
       }
     },
     {
@@ -129,6 +135,14 @@
           "name",
           "description"
         ]
+      },
+      "crud": {
+        "get": {
+          "key": "uuid"
+        },
+        "create": {},
+        "update": {},
+        "delete": {}
       }
     },
     {
@@ -285,6 +299,14 @@
           "frozen",
           "publish_at"
         ]
+      },
+      "crud": {
+        "get": {
+          "key": "uuid"
+        },
+        "create": {},
+        "update": {},
+        "delete": {}
       }
     }
   ]

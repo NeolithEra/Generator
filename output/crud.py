@@ -42,15 +42,6 @@ def update_blog(db: Session, blog_uuid: str, blog: schemas.BlogUpdate) -> Union[
     
     if db.query(models.Blog).filter(models.Blog.uuid == blog_uuid).scalar() is not None:
         db_entry: models.Blog = db.query(models.Blog).filter(models.Blog.uuid == blog_uuid).first()
-
-        if blog.name is not None:
-            db_entry.name = blog.name
-
-        if blog.description is not None:
-            db_entry.description = blog.description
-
-        if blog.summary is not None:
-            db_entry.summary = blog.summary
  
         db.commit()
         return db_entry
@@ -64,6 +55,57 @@ def delete_blog(db: Session, blog_uuid: str):
     """
     
     db.query(models.Blog).filter(models.Blog.uuid == blog_uuid).delete()
+    db.commit()
+
+                
+def get_blog_category(db: Session, blog_category_uuid: str) -> models.BlogCategory:
+    """
+    Used to get BlogCategory
+    """
+    
+    return db.query(models.BlogCategory).filter(models.BlogCategory.uuid == blog_category_uuid).first()
+
+                
+def search_blog_category(db: Session) -> List[models.BlogCategory]:
+    """
+    Used to search BlogCategory
+    """
+    
+    return db.query(models.BlogCategory).all()
+
+                
+def create_blog_category(db: Session, blog_category: schemas.BlogCategoryDb) -> models.BlogCategory:
+    """
+    Used to create BlogCategory
+    """
+    
+    db_entry = models.BlogCategory(**blog_category.dict())
+    db.add(db_entry)
+    db.commit()
+    db.refresh(db_entry)
+    return db_entry
+
+                
+def update_blog_category(db: Session, blog_category_uuid: str, blog_category: schemas.BlogCategoryUpdate) -> Union[models.BlogCategory, None]:
+    """
+    Used to update BlogCategory
+    """
+    
+    if db.query(models.BlogCategory).filter(models.BlogCategory.uuid == blog_category_uuid).scalar() is not None:
+        db_entry: models.BlogCategory = db.query(models.BlogCategory).filter(models.BlogCategory.uuid == blog_category_uuid).first()
+ 
+        db.commit()
+        return db_entry
+    else:
+        return None
+
+                
+def delete_blog_category(db: Session, blog_category_uuid: str):
+    """
+    Used to delete BlogCategory
+    """
+    
+    db.query(models.BlogCategory).filter(models.BlogCategory.uuid == blog_category_uuid).delete()
     db.commit()
 
                 
@@ -102,15 +144,6 @@ def update_blog_post(db: Session, blog_post_uuid: str, blog_post: schemas.BlogPo
     
     if db.query(models.BlogPost).filter(models.BlogPost.uuid == blog_post_uuid).scalar() is not None:
         db_entry: models.BlogPost = db.query(models.BlogPost).filter(models.BlogPost.uuid == blog_post_uuid).first()
-
-        if blog_post.name is not None:
-            db_entry.name = blog_post.name
-
-        if blog_post.summary is not None:
-            db_entry.summary = blog_post.summary
-
-        if blog_post.content is not None:
-            db_entry.content = blog_post.content
 
         if blog_post.category_uuid is not None:
             db_entry.category_uuid = blog_post.category_uuid

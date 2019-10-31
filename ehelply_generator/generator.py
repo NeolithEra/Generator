@@ -3,6 +3,9 @@ from pathlib import Path
 import re
 
 
+# TODO: The Db schema should be automatically built from the model fields and should not require explicilty mentioning in the structure
+# TODO: A field type of 'ext_id' should be created. This will take an extra property called
+
 def convert(name):
     s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
     return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
@@ -243,6 +246,19 @@ def {method}_{lil_name}(db: Session{params}){return_line}:
                 "name": name,
                 "fields": {"update": []},
             }
+
+            if 'crud' not in model:
+                model['crud'] = {
+                    'get': {},
+                    'create': {},
+                    'update': {},
+                    'delete': {}
+                }
+
+            for method in ['get', 'create', 'update', 'delete']:
+                if method not in model['crud']:
+                    model['crud'][method] = {}
+
             crud_schema.update(model['crud'])
 
             """
@@ -353,6 +369,16 @@ def {method}_{lil_name}(db: Session{params}){return_line}:
                     model_field['unique'] = False
 
                 """
+                ABSTRACTS
+                """
+                if 'abstracts' in field:
+                    for abstract in field['abstracts']:
+                        model['fields'].append({
+                            **abstract,
+                            "exclude_from_model": True,
+                        })
+
+                """
                 RELATIONSHIPS
                 """
                 if 'relation' in field:
@@ -378,13 +404,16 @@ def {method}_{lil_name}(db: Session{params}){return_line}:
                                     "populates": convert(related_model['name'])
                                 })
                             else:
+                                plural: str = convert(name) + "s"
+                                if 'plural' in model:
+                                    plural = convert(model['plural'])
                                 model_schema['relations'].append({
                                     "name": convert(related_model['name']),
                                     "model": related_model['name'],
-                                    "populates": convert(name) + "s"
+                                    "populates": plural
                                 })
                                 related_model['relations'].append({
-                                    "name": convert(name) + "s",
+                                    "name": plural,
                                     "model": name,
                                     "populates": convert(related_model['name'])
                                 })
@@ -442,12 +471,13 @@ def {method}_{lil_name}(db: Session{params}){return_line}:
                                 'name': schema_field['name'],
                                 'type': schema_field['type']
                             })
-                            crud_schema['fields']['update'].append(
-                                {
-                                    'required': False,
-                                    'name': schema_field['name']
-                                }
-                            )
+                            if 'exclude_from_model' not in field or not field['exclude_from_model']:
+                                crud_schema['fields']['update'].append(
+                                    {
+                                        'required': False,
+                                        'name': schema_field['name']
+                                    }
+                                )
                         elif type(entry) == dict and entry['field'] == schema_field['name']:
                             if 'required' in entry:
                                 required = entry['required']
@@ -458,37 +488,44 @@ def {method}_{lil_name}(db: Session{params}){return_line}:
                                 'name': schema_field['name'],
                                 'type': schema_field['type']
                             })
-                            crud_schema['fields']['update'].append(
-                                {
-                                    'required': False,
-                                    'name': schema_field['name']
-                                }
-                            )
+                            if 'exclude_from_model' not in field or not field['exclude_from_model']:
+                                crud_schema['fields']['update'].append(
+                                    {
+                                        'required': False,
+                                        'name': schema_field['name']
+                                    }
+                                )
 
                     # DB
-                    for entry in model['schemas']['db']:
-                        if type(entry) == str and entry == schema_field['name']:
-                            schema_schema['db'].append({
-                                'required': True,
-                                'name': schema_field['name'],
-                                'type': schema_field['type']
-                            })
-                        elif type(entry) == dict and entry['field'] == schema_field['name']:
-                            if 'required' in entry:
-                                required = entry['required']
-                            else:
-                                required = True
-                            schema_schema['db'].append({
-                                'required': required,
-                                'name': schema_field['name'],
-                                'type': schema_field['type']
-                            })
+                    # for entry in model['schemas']['db']:
+                    #     if type(entry) == str and entry == schema_field['name']:
+                    #         schema_schema['db'].append({
+                    #             'required': True,
+                    #             'name': schema_field['name'],
+                    #             'type': schema_field['type']
+                    #         })
+                    #     elif type(entry) == dict and entry['field'] == schema_field['name']:
+                    #         if 'required' in entry:
+                    #             required = entry['required']
+                    #         else:
+                    #             required = True
+                    #         schema_schema['db'].append({
+                    #             'required': required,
+                    #             'name': schema_field['name'],
+                    #             'type': schema_field['type']
+                    #         })
 
                 """
                 WHITELISTING WHERE FIELDS BELONG
                 """
                 if 'exclude_from_model' not in field or not field['exclude_from_model']:
                     model_schema['fields'].append(model_field)
+
+                    schema_schema['db'].append({
+                        'required': False,
+                        'name': schema_field['name'],
+                        'type': schema_field['type']
+                    })
 
             self.estructure['models'].append(model_schema)
             self.estructure['schemas'].append(schema_schema)
