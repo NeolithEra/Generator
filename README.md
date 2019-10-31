@@ -1,4 +1,5 @@
-# Batcher
-Automatic, scheduled, configurable, and scalable batching.
+# Generator
 
-`pip install ehelply-batcher`
+
+## Example command
+`python -m ehelply_generator.ehelply_gen generate F:\Programming\Projects\eHelply\Generator\structure.json F:\Programming\Projects\eHelply\Generator\output`

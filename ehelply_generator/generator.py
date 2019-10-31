@@ -12,10 +12,11 @@ def convert(name):
 
 
 class Generator:
-    def __init__(self) -> None:
-        self.structure_path: str = Path(Path(__file__).resolve().parents[1]).joinpath('structure.json')
+    def __init__(self, structure_path: Path, output_path: Path) -> None:
+        self.structure_path: Path = structure_path
         self.structure: dict = {}
-        with open(self.structure_path, 'r') as file:
+        self.output_path: Path = output_path
+        with open(str(self.structure_path), 'r') as file:
             self.structure = json.load(file)
 
         self.estructure: dict = {}
@@ -547,11 +548,13 @@ def {method}_{lil_name}(db: Session{params}){return_line}:
         self.write_file("schemas.py", self.schema_content)
 
     def write_file(self, name: str, content: str) -> None:
-        path: str = Path(Path(__file__).resolve().parents[1]).joinpath('output').joinpath(name)
-        with open(path, 'w') as file:
+        path: Path = self.output_path.joinpath(name)
+        with open(str(path), 'w') as file:
             file.write(content)
 
 
-if __name__ == "__main__":
-    generator = Generator()
-    generator.run()
+# if __name__ == "__main__":
+#     structure_path: Path = Path(Path(__file__).resolve().parents[1]).joinpath('structure.json')
+#     output_path: Path = Path(Path(__file__).resolve().parents[1]).joinpath('output')
+#     generator = Generator(structure_path=structure_path,output_path=output_path)
+#     generator.run()

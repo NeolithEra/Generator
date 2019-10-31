@@ -23,9 +23,15 @@ setup(
     install_requires=[
         'pytest',
         'sqlalchemy',
-        'ehelply_bootstrapper',
         'pydantic',
-        'python-slugify'
+        'python-slugify',
+        'ehelply_bootstrapper',
+        'click'
     ],
+    entry_points={
+        'console_scripts': [
+            'ehelplygen=ehelply_generator.ehelply_gen:ehelplygen',  # command=package.module:function
+        ],
+    },
 
 )
