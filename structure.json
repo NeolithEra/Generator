@@ -1,39 +1,64 @@
 {
   "models": [
     {
-      "name": "MyModal",
-      "table": "my_modals",
+      "name": "Blog",
+      "table": "blogs",
       "fields": [
         {
           "name": "uuid",
           "type": "uuid",
-          "nullable": false,
-          "default": null,
           "index": true
+        },
+        {
+          "name": "meta_id",
+          "type": "id"
         },
         {
           "name": "name",
           "type": "str",
-          "nullable": false,
-          "default": "default name",
-          "length": 32
+          "exclude_from_model": true
+        },
+        {
+          "name": "slug",
+          "type": "str",
+          "exclude_from_model": true
         },
         {
           "name": "description",
-          "type": "text",
-          "nullable": false,
-          "default": "what is this"
+          "type": "str",
+          "exclude_from_model": true
+        },
+        {
+          "name": "summary",
+          "type": "str",
+          "exclude_from_model": true
+        },
+        {
+          "name": "description_history",
+          "type": "list",
+          "exclude_from_model": true
+        },
+        {
+          "name": "summary_history",
+          "type": "list",
+          "exclude_from_model": true
+        },
+        {
+          "name": "created_at",
+          "type": "date",
+          "exclude_from_model": true
+        },
+        {
+          "name": "updated_at",
+          "type": "date",
+          "exclude_from_model": true
         }
       ],
       "schemas": {
-        "get": ["name"],
-        "create": ["name"],
-        "update": [
-          {
-            "field": "name"
-          }
-        ],
-        "db": ["uuid", "name"]
+        "get": ["name", "slug", "description", {"field": "description_history", "required": false} ,"summary", {"field": "summary_history", "required": false}, "created_at", "updated_at"],
+        "create": ["name", "description", "summary"],
+        "update": ["name", "description", "summary"],
+        "db": ["uuid", "meta_id"]
       },
       "crud": {
         "get": {},
@@ -43,40 +68,98 @@
       }
     },
     {
-      "name": "User",
-      "table": "users",
+      "name": "BlogPost",
+      "table": "blog_posts",
       "fields": [
         {
           "name": "uuid",
           "type": "uuid",
-          "nullable": false,
-          "default": null,
           "index": true
         },
         {
-          "name": "description",
-          "type": "text",
+          "name": "blog_uuid",
+          "type": "id",
           "nullable": false,
-          "default": "what is this"
+          "relation": {
+            "model": "Blog",
+            "key": "uuid",
+            "cascade": true,
+            "type": "1:n"
+          }
+        },
+        {
+          "name": "meta_uuid",
+          "type": "id"
         },
         {
           "name": "name",
           "type": "str",
+          "exclude_from_model": true
+        },
+        {
+          "name": "slug",
+          "type": "str",
+          "exclude_from_model": true
+        },
+        {
+          "name": "summary",
+          "type": "str",
+          "exclude_from_model": true
+        },
+        {
+          "name": "content_uuid",
+          "type": "id"
+        },
+                {
+          "name": "content",
+          "type": "str",
+          "exclude_from_model": true
+        },
+        {
+          "name": "content_history",
+          "type": "list",
+          "exclude_from_model": true
+        },
+        {
+          "name": "summary_history",
+          "type": "list",
+          "exclude_from_model": true
+        },
+        {
+          "name": "category_uuid",
+          "type": "id",
           "nullable": false,
-          "length": 50,
-          "default": "what is this"
+          "relation": {
+            "model": "BlogCategory",
+            "key": "uuid",
+            "cascade": true,
+            "type": "1:n"
+          }
+        },
+        {
+          "name": "locked",
+          "type": "bool",
+          "default": false
+        },
+        {
+          "name": "frozen",
+          "type": "bool",
+          "default": false
+        },
+        {
+          "name": "publish_at",
+          "type": "date"
+        },
+        {
+          "name": "deleted_at",
+          "type": "date"
         }
       ],
       "schemas": {
-        "get": ["name"],
-        "create": ["name"],
-        "update": [
-          {
-            "field": "name",
-            "required": false
-          }
-        ],
-        "db": ["uuid", "name"]
+        "get": ["name", "summary", "content", {"field": "category_uuid", "required": false}, {"field": "locked", "required": false}, {"field": "frozen", "required": false}, {"field": "publish_at", "required": false}, {"field": "content_history", "required": false}, {"field": "summary_history", "required": false}, "uuid", "slug", "created_at"],
+        "create": ["name", "summary", "content", {"field": "category_uuid", "required": false}, {"field": "locked", "required": false}, {"field": "frozen", "required": false}, {"field": "publish_at", "required": false}],
+        "update": ["name", "summary", "content", "category_uuid", "locked", "frozen", "publish_at"],
+        "db": ["uuid", "blog_uuid", "meta_uuid", "content_uuid", "category_uuid", "locked", "frozen", "publish_at", "deleted_at"]
       },
       "crud": {
         "get": {

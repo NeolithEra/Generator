@@ -7,44 +7,50 @@ from ehelply_bootstrapper.utils.state import State
 from typing import List, Union
         
                 
-def get_my_modal(db: Session, my_modal_uuid: str) -> models.MyModal:
+def get_blog(db: Session, blog_uuid: str) -> models.Blog:
     """
-    Used to get MyModal
+    Used to get Blog
     """
     
-    return db.query(models.MyModal).filter(models.MyModal.uuid == my_modal_uuid).first()
+    return db.query(models.Blog).filter(models.Blog.uuid == blog_uuid).first()
 
                 
-def search_my_modal(db: Session) -> List[models.MyModal]:
+def search_blog(db: Session) -> List[models.Blog]:
     """
-    Used to search MyModal
+    Used to search Blog
     """
     
-    return db.query(models.MyModal).all()
+    return db.query(models.Blog).all()
 
                 
-def create_my_modal(db: Session, my_modal: schemas.MyModalDb) -> models.MyModal:
+def create_blog(db: Session, blog: schemas.BlogDb) -> models.Blog:
     """
-    Used to create MyModal
+    Used to create Blog
     """
     
-    db_entry = models.MyModal(**my_modal.dict())
+    db_entry = models.Blog(**blog.dict())
     db.add(db_entry)
     db.commit()
     db.refresh(db_entry)
     return db_entry
 
                 
-def update_my_modal(db: Session, my_modal_uuid: str, my_modal: schemas.MyModalUpdate) -> Union[models.MyModal, None]:
+def update_blog(db: Session, blog_uuid: str, blog: schemas.BlogUpdate) -> Union[models.Blog, None]:
     """
-    Used to update MyModal
+    Used to update Blog
     """
     
-    if db.query(models.MyModal).filter(models.MyModal.uuid == my_modal_uuid).scalar() is not None:
-        db_entry: models.MyModal = db.query(models.MyModal).filter(models.MyModal.uuid == my_modal_uuid).first()
+    if db.query(models.Blog).filter(models.Blog.uuid == blog_uuid).scalar() is not None:
+        db_entry: models.Blog = db.query(models.Blog).filter(models.Blog.uuid == blog_uuid).first()
 
-        if my_modal.name is not None:
-            db_entry.name = my_modal.name
+        if blog.name is not None:
+            db_entry.name = blog.name
+
+        if blog.description is not None:
+            db_entry.description = blog.description
+
+        if blog.summary is not None:
+            db_entry.summary = blog.summary
  
         db.commit()
         return db_entry
@@ -52,53 +58,71 @@ def update_my_modal(db: Session, my_modal_uuid: str, my_modal: schemas.MyModalUp
         return None
 
                 
-def delete_my_modal(db: Session, my_modal_uuid: str):
+def delete_blog(db: Session, blog_uuid: str):
     """
-    Used to delete MyModal
+    Used to delete Blog
     """
     
-    db.query(models.MyModal).filter(models.MyModal.uuid == my_modal_uuid).delete()
+    db.query(models.Blog).filter(models.Blog.uuid == blog_uuid).delete()
     db.commit()
 
                 
-def get_user(db: Session, user_uuid: str) -> models.User:
+def get_blog_post(db: Session, blog_post_uuid: str) -> models.BlogPost:
     """
-    Used to get User
+    Used to get BlogPost
     """
     
-    return db.query(models.User).filter(models.User.uuid == user_uuid).first()
+    return db.query(models.BlogPost).filter(models.BlogPost.uuid == blog_post_uuid).first()
 
                 
-def search_user(db: Session) -> List[models.User]:
+def search_blog_post(db: Session) -> List[models.BlogPost]:
     """
-    Used to search User
+    Used to search BlogPost
     """
     
-    return db.query(models.User).all()
+    return db.query(models.BlogPost).all()
 
                 
-def create_user(db: Session, user: schemas.UserDb) -> models.User:
+def create_blog_post(db: Session, blog_post: schemas.BlogPostDb) -> models.BlogPost:
     """
-    Used to create User
+    Used to create BlogPost
     """
     
-    db_entry = models.User(**user.dict())
+    db_entry = models.BlogPost(**blog_post.dict())
     db.add(db_entry)
     db.commit()
     db.refresh(db_entry)
     return db_entry
 
                 
-def update_user(db: Session, user_uuid: str, user: schemas.UserUpdate) -> Union[models.User, None]:
+def update_blog_post(db: Session, blog_post_uuid: str, blog_post: schemas.BlogPostUpdate) -> Union[models.BlogPost, None]:
     """
-    Used to update User
+    Used to update BlogPost
     """
     
-    if db.query(models.User).filter(models.User.uuid == user_uuid).scalar() is not None:
-        db_entry: models.User = db.query(models.User).filter(models.User.uuid == user_uuid).first()
+    if db.query(models.BlogPost).filter(models.BlogPost.uuid == blog_post_uuid).scalar() is not None:
+        db_entry: models.BlogPost = db.query(models.BlogPost).filter(models.BlogPost.uuid == blog_post_uuid).first()
 
-        if user.name is not None:
-            db_entry.name = user.name
+        if blog_post.name is not None:
+            db_entry.name = blog_post.name
+
+        if blog_post.summary is not None:
+            db_entry.summary = blog_post.summary
+
+        if blog_post.content is not None:
+            db_entry.content = blog_post.content
+
+        if blog_post.category_uuid is not None:
+            db_entry.category_uuid = blog_post.category_uuid
+
+        if blog_post.locked is not None:
+            db_entry.locked = blog_post.locked
+
+        if blog_post.frozen is not None:
+            db_entry.frozen = blog_post.frozen
+
+        if blog_post.publish_at is not None:
+            db_entry.publish_at = blog_post.publish_at
  
         db.commit()
         return db_entry
@@ -106,10 +130,10 @@ def update_user(db: Session, user_uuid: str, user: schemas.UserUpdate) -> Union[
         return None
 
                 
-def delete_user(db: Session, user_uuid: str):
+def delete_blog_post(db: Session, blog_post_uuid: str):
     """
-    Used to delete User
+    Used to delete BlogPost
     """
     
-    db.query(models.User).filter(models.User.uuid == user_uuid).delete()
+    db.query(models.BlogPost).filter(models.BlogPost.uuid == blog_post_uuid).delete()
     db.commit()

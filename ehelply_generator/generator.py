@@ -53,7 +53,7 @@ class {name}(State.mysql.Base):
     \"\"\"
     Represents a {name}
     \"\"\"
-    __tablename__ = \"{table}\"\n""".format(name=model['name'], table=model['table'])
+    __tablename__ = \"{table}\"\n\n""".format(name=model['name'], table=model['table'])
 
             for field in model['fields']:
                 """
@@ -66,35 +66,53 @@ class {name}(State.mysql.Base):
                 """
 
                 name: str = field['name']
-                type: str = field['type'] + ","
+                var_type: str = field['type'] + ", "
 
                 if field['index']:
-                    index: str = "primary_key=True,index=True,"
+                    index: str = "primary_key=True, index=True, "
                 else:
                     index: str = ""
 
                 if field['nullable']:
-                    nullable: str = "nullable=True,"
+                    nullable: str = "nullable=True, "
                 else:
-                    nullable: str = "nullable=False,"
+                    nullable: str = "nullable=False, "
 
                 if field['unique']:
-                    unique: str = "unique=True,"
+                    unique: str = "unique=True, "
                 else:
-                    unique: str = "unique=False,"
+                    unique: str = "unique=False, "
 
                 if 'default' in field:
-                    default: str = "default=\"" + field['default'] + "\","
+                    if type(field['default']) == str:
+                        default: str = "default=\"" + field['default'] + "\", "
+                    else:
+                        default: str = "default=" + str(field['default']) + ", "
                 else:
                     default: str = ""
 
-                self.model_content += """    {name} = Column({type}{index}{unique}{nullable}{default})\n""".format(
+                if 'foreign' in field:
+                    cascade: str = ""
+                    if 'cascade' in field['foreign'] and field['foreign']['cascade']:
+                        cascade = ", ondelete='CASCADE'"
+                    foreign: str = "ForeignKey('{name}'{cascade}), ".format(name=field['foreign']['name'], cascade=cascade)
+                else:
+                    foreign: str = ""
+
+                self.model_content += """    {name} = Column({type}{foreign}{index}{unique}{nullable}{default})\n""".format(
                     name=name,
-                    type=type,
+                    type=var_type,
+                    foreign=foreign,
                     index=index,
                     unique=unique,
                     nullable=nullable,
                     default=default)
+                if self.model_content.endswith(", )\n"):
+                    self.model_content = self.model_content[:-4] + ")\n"
+
+            for relation in model['relations']:
+                self.model_content += """
+    {name} = relationship(\"{model}\", back_populates=\"{populates}\", passive_deletes=True)\n""".format(name=relation['name'], populates=relation['populates'], model=relation['model'])
 
         self.model_content += "\n# END OF GENERATED CODE\n"
 
@@ -114,6 +132,10 @@ class {name}{method}(BaseModel):
                     self.schema_content += """    {name}: {type}{default}\n""".format(name=field['name'],
                                                                                       type=field['type'],
                                                                                       default=default)
+                if method == "db":
+                    self.schema_content += """
+    class Config:
+        orm_mode = True\n"""
 
         self.schema_content += "\n# END OF GENERATED CODE\n"
 
@@ -208,6 +230,7 @@ def {method}_{lil_name}(db: Session{params}){return_line}:
                 "name": name,
                 "table": table,
                 "fields": [],
+                "relations": [],
             }
             schema_schema: dict = {
                 "name": name,
@@ -250,6 +273,7 @@ def {method}_{lil_name}(db: Session{params}){return_line}:
                 """
                 if field['type'] == 'uuid':
                     model_field['type'] = "String(64)"
+                    model_field['unique'] = True
                     schema_field['type'] = "str"
 
                 elif field['type'] == 'dict':
@@ -279,7 +303,6 @@ def {method}_{lil_name}(db: Session{params}){return_line}:
                         length = field['length']
                     model_field['type'] = "String({length})".format(length=length)
                     model_field['nullable'] = True
-                    model_field['default'] = "{}"
                     schema_field['type'] = "str"
 
                 elif field['type'] == 'text':
@@ -311,118 +334,161 @@ def {method}_{lil_name}(db: Session{params}){return_line}:
                     if model_field['default'] is None:
                         model_field['default'] = "None"
 
-                if 'nullable' in field and field['nullable']:
-                    model_field['nullable'] = True
-                else:
+                if 'nullable' in field:
+                    model_field['nullable'] = field['nullable']
+
+                if 'index' in field:
+                    model_field['index'] = field['index']
+
+                if 'unique' in field:
+                    model_field['unique'] = field['unique']
+
+                if 'nullable' not in model_field:
                     model_field['nullable'] = False
 
-                if 'index' in field and field['index']:
-                    model_field['index'] = True
-                else:
+                if 'index' not in model_field:
                     model_field['index'] = False
 
-                if 'unique' in field and field['unique']:
-                    model_field['unique'] = True
-                else:
+                if 'unique' not in model_field:
                     model_field['unique'] = False
+
+                """
+                RELATIONSHIPS
+                """
+                if 'relation' in field:
+                    related_to: str = field['relation']['model']
+                    related_key: str = field['relation']['key']
+                    related_type: str = field['relation']['type']
+                    related_cascade: bool = field['relation']['cascade']
+                    for related_model in self.estructure['models']:
+                        if related_model['name'] == related_to:
+                            model_field['foreign'] = {
+                                "name": related_model['table'] + "." + related_key,
+                                "cascade": related_cascade
+                            }
+                            if related_type == "1:1":
+                                model_schema['relations'].append({
+                                    "name": convert(related_model['name']),
+                                    "model": related_model['name'],
+                                    "populates": convert(name)
+                                })
+                                related_model['relations'].append({
+                                    "name": convert(name),
+                                    "model": name,
+                                    "populates": convert(related_model['name'])
+                                })
+                            else:
+                                model_schema['relations'].append({
+                                    "name": convert(related_model['name']),
+                                    "model": related_model['name'],
+                                    "populates": convert(name) + "s"
+                                })
+                                related_model['relations'].append({
+                                    "name": convert(name) + "s",
+                                    "model": name,
+                                    "populates": convert(related_model['name'])
+                                })
+                            # TODO: Add a case n the IF statement above for auto generating pivot tables for n:n
 
                 """
                 FORMING SCHEMA FIELDS
                 """
 
-                # GET
-                for entry in model['schemas']['get']:
-                    if type(entry) == str and entry == schema_field['name']:
-                        schema_schema['get'].append({
-                            'required': True,
-                            'name': schema_field['name'],
-                            'type': schema_field['type']
-                        })
-                    elif type(entry) == dict and entry['field'] == schema_field['name']:
-                        if 'required' in entry:
-                            required = entry['required']
-                        else:
-                            required = True
-                        schema_schema['update'].append({
-                            'required': required,
-                            'name': schema_field['name'],
-                            'type': schema_field['type']
-                        })
+                if 'exclude_from_schema' not in field or not field['exclude_from_schema']:
 
-                # CREATE
-                for entry in model['schemas']['create']:
-                    if type(entry) == str and entry == schema_field['name']:
-                        schema_schema['create'].append({
-                            'required': True,
-                            'name': schema_field['name'],
-                            'type': schema_field['type']
-                        })
-                    elif type(entry) == dict and entry['field'] == schema_field['name']:
-                        if 'required' in entry:
-                            required = entry['required']
-                        else:
-                            required = True
-                        schema_schema['update'].append({
-                            'required': required,
-                            'name': schema_field['name'],
-                            'type': schema_field['type']
-                        })
+                    # GET
+                    for entry in model['schemas']['get']:
+                        if type(entry) == str and entry == schema_field['name']:
+                            schema_schema['get'].append({
+                                'required': True,
+                                'name': schema_field['name'],
+                                'type': schema_field['type']
+                            })
+                        elif type(entry) == dict and entry['field'] == schema_field['name']:
+                            if 'required' in entry:
+                                required = entry['required']
+                            else:
+                                required = True
+                            schema_schema['get'].append({
+                                'required': required,
+                                'name': schema_field['name'],
+                                'type': schema_field['type']
+                            })
 
-                # UPDATE
-                for entry in model['schemas']['update']:
-                    if type(entry) == str and entry == schema_field['name']:
-                        schema_schema['update'].append({
-                            'required': False,
-                            'name': schema_field['name'],
-                            'type': schema_field['type']
-                        })
-                        crud_schema['fields']['update'].append(
-                            {
+                    # CREATE
+                    for entry in model['schemas']['create']:
+                        if type(entry) == str and entry == schema_field['name']:
+                            schema_schema['create'].append({
+                                'required': True,
+                                'name': schema_field['name'],
+                                'type': schema_field['type']
+                            })
+                        elif type(entry) == dict and entry['field'] == schema_field['name']:
+                            if 'required' in entry:
+                                required = entry['required']
+                            else:
+                                required = True
+                            schema_schema['create'].append({
+                                'required': required,
+                                'name': schema_field['name'],
+                                'type': schema_field['type']
+                            })
+
+                    # UPDATE
+                    for entry in model['schemas']['update']:
+                        if type(entry) == str and entry == schema_field['name']:
+                            schema_schema['update'].append({
                                 'required': False,
-                                'name': schema_field['name']
-                            }
-                        )
-                    elif type(entry) == dict and entry['field'] == schema_field['name']:
-                        if 'required' in entry:
-                            required = entry['required']
-                        else:
-                            required = False
-                        schema_schema['update'].append({
-                            'required': required,
-                            'name': schema_field['name'],
-                            'type': schema_field['type']
-                        })
-                        crud_schema['fields']['update'].append(
-                            {
-                                'required': False,
-                                'name': schema_field['name']
-                            }
-                        )
+                                'name': schema_field['name'],
+                                'type': schema_field['type']
+                            })
+                            crud_schema['fields']['update'].append(
+                                {
+                                    'required': False,
+                                    'name': schema_field['name']
+                                }
+                            )
+                        elif type(entry) == dict and entry['field'] == schema_field['name']:
+                            if 'required' in entry:
+                                required = entry['required']
+                            else:
+                                required = False
+                            schema_schema['update'].append({
+                                'required': required,
+                                'name': schema_field['name'],
+                                'type': schema_field['type']
+                            })
+                            crud_schema['fields']['update'].append(
+                                {
+                                    'required': False,
+                                    'name': schema_field['name']
+                                }
+                            )
 
-                # DB
-                for entry in model['schemas']['db']:
-                    if type(entry) == str and entry == schema_field['name']:
-                        schema_schema['db'].append({
-                            'required': True,
-                            'name': schema_field['name'],
-                            'type': schema_field['type']
-                        })
-                    elif type(entry) == dict and entry['field'] == schema_field['name']:
-                        if 'required' in entry:
-                            required = entry['required']
-                        else:
-                            required = True
-                        schema_schema['update'].append({
-                            'required': required,
-                            'name': schema_field['name'],
-                            'type': schema_field['type']
-                        })
+                    # DB
+                    for entry in model['schemas']['db']:
+                        if type(entry) == str and entry == schema_field['name']:
+                            schema_schema['db'].append({
+                                'required': True,
+                                'name': schema_field['name'],
+                                'type': schema_field['type']
+                            })
+                        elif type(entry) == dict and entry['field'] == schema_field['name']:
+                            if 'required' in entry:
+                                required = entry['required']
+                            else:
+                                required = True
+                            schema_schema['db'].append({
+                                'required': required,
+                                'name': schema_field['name'],
+                                'type': schema_field['type']
+                            })
 
                 """
-                FORMING CRUD FIELDS
+                WHITELISTING WHERE FIELDS BELONG
                 """
-
-                model_schema['fields'].append(model_field)
+                if 'exclude_from_model' not in field or not field['exclude_from_model']:
+                    model_schema['fields'].append(model_field)
 
             self.estructure['models'].append(model_schema)
             self.estructure['schemas'].append(schema_schema)
