@@ -17,9 +17,9 @@ class MyModal(State.mysql.Base):
     description = Column(Text,unique=False,nullable=False,default="what is this",)
 
 
-class Users(State.mysql.Base):
+class User(State.mysql.Base):
     """
-    Represents a Users
+    Represents a User
     """
     __tablename__ = "users"
     uuid = Column(String(64),primary_key=True,index=True,unique=False,nullable=False,default="None",)

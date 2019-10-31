@@ -30,8 +30,7 @@
         "create": ["name"],
         "update": [
           {
-            "field": "name",
-            "required": true
+            "field": "name"
           }
         ],
         "db": ["uuid", "name"]
@@ -39,12 +38,12 @@
       "crud": {
         "get": {},
         "create": {},
-        "update": ["name"],
+        "update": {},
         "delete": {}
       }
     },
     {
-      "name": "Users",
+      "name": "User",
       "table": "users",
       "fields": [
         {
@@ -80,9 +79,11 @@
         "db": ["uuid", "name"]
       },
       "crud": {
-        "get": {},
+        "get": {
+          "key": "uuid"
+        },
         "create": {},
-        "update": ["name"],
+        "update": {},
         "delete": {}
       }
     }

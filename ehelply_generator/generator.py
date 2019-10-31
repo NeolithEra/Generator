@@ -1,5 +1,11 @@
 import json
 from pathlib import Path
+import re
+
+
+def convert(name):
+    s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
 
 class Generator:
@@ -29,7 +35,9 @@ from pydantic import BaseModel
  
 from . import models, schemas 
  
-from ehelply_bootstrapper.utils.state import State 
+from ehelply_bootstrapper.utils.state import State
+
+from typing import List, Union
         """
 
         self.model_content: str = self.model_base
@@ -100,16 +108,86 @@ class {name}{method}(BaseModel):
     Used for {method}
     \"\"\"\n""".format(name=model['name'], method=method.capitalize())
                 for field in model[method]:
-                    default:str = ""
+                    default: str = ""
                     if not field['required']:
                         default = " = None"
-                    self.schema_content += """    {name}: {type}{default}\n""".format(name=field['name'], type=field['type'], default=default)
-
+                    self.schema_content += """    {name}: {type}{default}\n""".format(name=field['name'],
+                                                                                      type=field['type'],
+                                                                                      default=default)
 
         self.schema_content += "\n# END OF GENERATED CODE\n"
 
     def generate_crud(self) -> None:
-        self.crud_content += "\n# END OF GENERATED CODE\n"
+        for model in self.estructure['cruds']:
+            for method in ["get", "search", "create", "update", "delete"]:
+                params: str = ""
+                return_line: str = ""
+                body: str = ""
+
+                if method == "get":
+                    key:str = "uuid"
+                    if 'key' in model['get']:
+                        key = model['get']['key']
+                    params += ", {lil_name}_{key}: str".format(lil_name=convert(model['name']), key=key)
+                    return_line += " -> models.{name}".format(name=model['name'])
+                    body += """
+    return db.query(models.{name}).filter(models.{name}.{key} == {lil_name}_{key}).first()""".format(name=model['name'], lil_name=convert(model['name']), key=key)
+
+                if method == "search":
+                    return_line += " -> List[models.{name}]".format(name=model['name'])
+                    body += """
+    return db.query(models.{name}).all()""".format(name=model['name'])
+
+                if method == "delete":
+                    key:str = "uuid"
+                    if 'key' in model['delete']:
+                        key = model['delete']['key']
+                    params += ", {lil_name}_{key}: str".format(lil_name=convert(model['name']), key=key)
+                    body += """
+    db.query(models.{name}).filter(models.{name}.{key} == {lil_name}_{key}).delete()
+    db.commit()""".format(name=model['name'], lil_name=convert(model['name']), key=key)
+
+                if method == "create":
+                    params += ", {lil_name}: schemas.{name}Db".format(lil_name=convert(model['name']), name=model['name'])
+                    return_line += " -> models.{name}".format(name=model['name'])
+                    body += """
+    db_entry = models.{name}(**{lil_name}.dict())
+    db.add(db_entry)
+    db.commit()
+    db.refresh(db_entry)
+    return db_entry""".format(name=model['name'], lil_name=convert(model['name']))
+
+                if method == "update":
+                    key:str = "uuid"
+                    if 'key' in model['update']:
+                        key = model['update']['key']
+                    params += ", {lil_name}_{key}: str".format(lil_name=convert(model['name']), key=key)
+                    params += ", {lil_name}: schemas.{name}Update".format(lil_name=convert(model['name']), name=model['name'])
+                    return_line += " -> Union[models.{name}, None]".format(name=model['name'])
+                    body += """
+    if db.query(models.{name}).filter(models.{name}.{key} == {lil_name}_{key}).scalar() is not None:
+        db_entry: models.{name} = db.query(models.{name}).filter(models.{name}.{key} == {lil_name}_{key}).first()\n""".format(name=model['name'], lil_name=convert(model['name']), key=key)
+                    for field in model['fields']['update']:
+                        if field['required']:
+                            body += """
+        db_entry.{field_name} = {lil_name}.{field_name}\n""".format(field_name = field['name'], lil_name=convert(model['name']))
+                        else:
+                            body += """
+        if {lil_name}.{field_name} is not None:
+            db_entry.{field_name} = {lil_name}.{field_name}\n""".format(field_name=field['name'], lil_name=convert(model['name']))
+                    body += """ 
+        db.commit()
+        return db_entry
+    else:
+        return None"""
+
+                self.crud_content += """
+                
+def {method}_{lil_name}(db: Session{params}){return_line}:
+    \"\"\"
+    Used to {method} {name}
+    \"\"\"
+    {body}\n""".format(method=method, lil_name=convert(model['name']), name=model['name'], params=params, return_line=return_line, body=body)
 
     def expand_structure(self) -> None:
 
@@ -140,8 +218,9 @@ class {name}{method}(BaseModel):
             }
             crud_schema: dict = {
                 "name": name,
-                "fields": [],
+                "fields": {"update": []},
             }
+            crud_schema.update(model['crud'])
 
             """
             MODEL FIELD INFORMATION SETUP
@@ -250,6 +329,8 @@ class {name}{method}(BaseModel):
                 """
                 FORMING SCHEMA FIELDS
                 """
+
+                # GET
                 for entry in model['schemas']['get']:
                     if type(entry) == str and entry == schema_field['name']:
                         schema_schema['get'].append({
@@ -258,12 +339,17 @@ class {name}{method}(BaseModel):
                             'type': schema_field['type']
                         })
                     elif type(entry) == dict and entry['field'] == schema_field['name']:
-                        schema_schema['get'].append({
-                            'required': entry['required'],
+                        if 'required' in entry:
+                            required = entry['required']
+                        else:
+                            required = True
+                        schema_schema['update'].append({
+                            'required': required,
                             'name': schema_field['name'],
                             'type': schema_field['type']
                         })
 
+                # CREATE
                 for entry in model['schemas']['create']:
                     if type(entry) == str and entry == schema_field['name']:
                         schema_schema['create'].append({
@@ -272,26 +358,48 @@ class {name}{method}(BaseModel):
                             'type': schema_field['type']
                         })
                     elif type(entry) == dict and entry['field'] == schema_field['name']:
-                        schema_schema['create'].append({
-                            'required': entry['required'],
+                        if 'required' in entry:
+                            required = entry['required']
+                        else:
+                            required = True
+                        schema_schema['update'].append({
+                            'required': required,
                             'name': schema_field['name'],
                             'type': schema_field['type']
                         })
 
+                # UPDATE
                 for entry in model['schemas']['update']:
                     if type(entry) == str and entry == schema_field['name']:
                         schema_schema['update'].append({
-                            'required': True,
+                            'required': False,
                             'name': schema_field['name'],
                             'type': schema_field['type']
                         })
+                        crud_schema['fields']['update'].append(
+                            {
+                                'required': False,
+                                'name': schema_field['name']
+                            }
+                        )
                     elif type(entry) == dict and entry['field'] == schema_field['name']:
+                        if 'required' in entry:
+                            required = entry['required']
+                        else:
+                            required = False
                         schema_schema['update'].append({
-                            'required': entry['required'],
+                            'required': required,
                             'name': schema_field['name'],
                             'type': schema_field['type']
                         })
+                        crud_schema['fields']['update'].append(
+                            {
+                                'required': False,
+                                'name': schema_field['name']
+                            }
+                        )
 
+                # DB
                 for entry in model['schemas']['db']:
                     if type(entry) == str and entry == schema_field['name']:
                         schema_schema['db'].append({
@@ -300,8 +408,12 @@ class {name}{method}(BaseModel):
                             'type': schema_field['type']
                         })
                     elif type(entry) == dict and entry['field'] == schema_field['name']:
-                        schema_schema['db'].append({
-                            'required': entry['required'],
+                        if 'required' in entry:
+                            required = entry['required']
+                        else:
+                            required = True
+                        schema_schema['update'].append({
+                            'required': required,
                             'name': schema_field['name'],
                             'type': schema_field['type']
                         })
@@ -311,7 +423,6 @@ class {name}{method}(BaseModel):
                 """
 
                 model_schema['fields'].append(model_field)
-                crud_schema['fields'].append(crud_field)
 
             self.estructure['models'].append(model_schema)
             self.estructure['schemas'].append(schema_schema)

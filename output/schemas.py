@@ -21,7 +21,7 @@ class MyModalUpdate(BaseModel):
     """
     Used for Update
     """
-    name: str
+    name: str = None
 
 
 class MyModalDb(BaseModel):
@@ -32,28 +32,28 @@ class MyModalDb(BaseModel):
     name: str
 
 
-class UsersGet(BaseModel):
+class UserGet(BaseModel):
     """
     Used for Get
     """
     name: str
 
 
-class UsersCreate(BaseModel):
+class UserCreate(BaseModel):
     """
     Used for Create
     """
     name: str
 
 
-class UsersUpdate(BaseModel):
+class UserUpdate(BaseModel):
     """
     Used for Update
     """
     name: str = None
 
 
-class UsersDb(BaseModel):
+class UserDb(BaseModel):
     """
     Used for Db
     """
