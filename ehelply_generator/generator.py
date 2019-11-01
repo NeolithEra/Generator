@@ -311,7 +311,6 @@ def {method}_{lil_name}(db: Session{params}){return_line}:
                         length = field['length']
                     model_field['type'] = "String({length})".format(length=length)
                     model_field['nullable'] = True
-                    model_field['default'] = "{}"
                     schema_field['type'] = "str"
 
                 elif field['type'] == 'id':

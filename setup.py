@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 setup(
     name='ehelply-generator',
     packages=find_packages(),  # this must be the same as the name above
-    version='0.1.1',
+    version='0.1.2',
     description='eHelply Generator',
     long_description=long_description,
     long_description_content_type="text/markdown",
