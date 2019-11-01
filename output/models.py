@@ -31,7 +31,7 @@ class BlogCategory(State.mysql.Base):
     blog_uuid = Column(String(64), ForeignKey('blogs.uuid', ondelete='CASCADE'), unique=False, nullable=False)
     meta_id = Column(String(64), unique=False, nullable=True)
 
-    blog = relationship("Blog", back_populates="blog_categories", passive_deletes=True)
+    blog = relationship("Blog", back_populates="blog_categories", passive_deletes=False)
 
     blog_posts = relationship("BlogPost", back_populates="blog_category", passive_deletes=True)
 
@@ -52,8 +52,8 @@ class BlogPost(State.mysql.Base):
     publish_at = Column(DateTime, unique=False, nullable=True)
     deleted_at = Column(DateTime, unique=False, nullable=True)
 
-    blog = relationship("Blog", back_populates="blog_posts", passive_deletes=True)
+    blog = relationship("Blog", back_populates="blog_posts", passive_deletes=False)
 
-    blog_category = relationship("BlogCategory", back_populates="blog_posts", passive_deletes=True)
+    blog_category = relationship("BlogCategory", back_populates="blog_posts", passive_deletes=False)
 
 # END OF GENERATED CODE

@@ -116,7 +116,7 @@ class {name}(State.mysql.Base):
 
             for relation in model['relations']:
                 self.model_content += """
-    {name} = relationship(\"{model}\", back_populates=\"{populates}\", passive_deletes=True)\n""".format(name=relation['name'], populates=relation['populates'], model=relation['model'])
+    {name} = relationship(\"{model}\", back_populates=\"{populates}\", passive_deletes={passive})\n""".format(name=relation['name'], populates=relation['populates'], model=relation['model'], passive=relation['passive'])
 
         self.model_content += "\n# END OF GENERATED CODE\n"
 
@@ -397,12 +397,14 @@ def {method}_{lil_name}(db: Session{params}){return_line}:
                                 model_schema['relations'].append({
                                     "name": convert(related_model['name']),
                                     "model": related_model['name'],
-                                    "populates": convert(name)
+                                    "populates": convert(name),
+                                    "passive": False
                                 })
                                 related_model['relations'].append({
                                     "name": convert(name),
                                     "model": name,
-                                    "populates": convert(related_model['name'])
+                                    "populates": convert(related_model['name']),
+                                    "passive": True
                                 })
                             else:
                                 plural: str = convert(name) + "s"
@@ -411,12 +413,14 @@ def {method}_{lil_name}(db: Session{params}){return_line}:
                                 model_schema['relations'].append({
                                     "name": convert(related_model['name']),
                                     "model": related_model['name'],
-                                    "populates": plural
+                                    "populates": plural,
+                                    "passive": False
                                 })
                                 related_model['relations'].append({
                                     "name": plural,
                                     "model": name,
-                                    "populates": convert(related_model['name'])
+                                    "populates": convert(related_model['name']),
+                                    "passive": True
                                 })
                             # TODO: Add a case n the IF statement above for auto generating pivot tables for n:n
 
