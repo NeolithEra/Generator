@@ -21,7 +21,6 @@ setup(
         "Operating System :: OS Independent",
     ),
     install_requires=[
-        'pytest',
         'sqlalchemy',
         'pydantic',
         'python-slugify',
